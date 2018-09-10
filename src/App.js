@@ -21,16 +21,19 @@ import ClearIcon from '@material-ui/icons/Clear';
 
 import TextField from '@material-ui/core/TextField';
 
-const foods = [
+import CircularProgress from '@material-ui/core/CircularProgress';
+
+const defaults = [
   { name: 'Pure Protein bar', calories: 200,  protein: 20, weight: 50 },
   { name: 'Egg whites',       calories: 120,  protein: 28, weight: 252 },
   { name: 'Ground beef',      calories: 765,  protein: 95, weight: 450 },
-  { name: 'Snack Pack',       calories: 5,    protein: 0,  weight: 99 },
+  { name: 'Snack Pack jello', calories: 5,    protein: 0,  weight: 99 },
   { name: 'Potatoes',         calories: 297,  protein: 8,  weight: 400 },
   { name: 'White Rice',       calories: 365,  protein: 7,  weight: 100 },
   { name: 'Ground turkey',    calories: 590,  protein: 82, weight: 454 },
-  { name: 'Small pepperoni',  calories: 1290, protein: 50, weight: 537 },
-  { name: 'Breyers delights', calories: 280,  protein: 16, weight: 270 }
+  { name: 'Pepperoni pizza',  calories: 1290, protein: 50, weight: 537 },
+  { name: 'Breyers delights', calories: 280,  protein: 16, weight: 270 },
+  { name: 'Broccoli',         calories: 34,   protein: 2.8, weight: 100 }
 ];
 
 class App extends Component {
@@ -38,6 +41,7 @@ class App extends Component {
   state = {
     page: '/',
     foods: [],
+    loadingFoods: true,
     bulkWeight: 0,
     cutWeight: 1,
     goal: 'cut'
@@ -52,12 +56,6 @@ class App extends Component {
 
     request.onsuccess = (e) => {
       this.foodDB = e.target.result;
-
-      // let trans = this.foodDB.transaction("food", "readwrite");
-      // let store = trans.objectStore("food");
-      // foods.forEach((food) => {
-      //   store.put(food);
-      // });
       this.getFoods();
     };
 
@@ -67,7 +65,6 @@ class App extends Component {
       if (db.objectStoreNames.contains("food")) {
         db.deleteObjectStore("food");
       }
-
       db.createObjectStore("food", {keyPath: "name"});
     };
   }
@@ -82,7 +79,7 @@ class App extends Component {
   getFoods = () => {
     let trans = this.foodDB.transaction("food", "readonly");
     trans.objectStore("food").getAll().onsuccess = (e) => {
-      this.setState({...this.state, foods: e.target.result});
+      this.setState({ ...this.state, foods: e.target.result, loadingFoods: false },);
     }
   }
 
@@ -145,6 +142,17 @@ class App extends Component {
     }
   }
 
+  loadExamples = () => {
+    this.setState({ loadingFoods: true }, () => {
+      let trans = this.foodDB.transaction("food", "readwrite");
+      let store = trans.objectStore("food");
+      defaults.forEach((food) => {
+        store.put(food);
+      });
+      this.getFoods();
+    });
+  }
+
   render() {
     return (
       <div className="App">
@@ -164,7 +172,21 @@ class App extends Component {
           <Route path="/" exact render={() =>
             <React.Fragment>
               {
-                !!this.state.foods.length &&
+                this.state.loadingFoods &&
+                <div className="spinner-container">
+                  <CircularProgress/>
+                </div>
+              }
+              {
+                !this.state.loadingFoods && !this.state.foods.length &&
+                <div className="no-foods">
+                  <div>No foods yet...</div>
+                  <Button variant="outlined" component={Link} to="/foods"
+                          onClick={() => this.setState({ focusName: true })}>Add some</Button>
+                </div>
+              }
+              {
+                !this.state.loadingFoods && !!this.state.foods.length &&
                 <div className="table table--index">
                   <label className="cell head">Food</label>
                   <span className="cell head">Index</span>
@@ -185,14 +207,6 @@ class App extends Component {
                       </React.Fragment>
                     )
                   }
-                </div>
-              }
-              {
-                !this.state.foods.length &&
-                <div className="no-foods">
-                  <div>No foods yet...</div>
-                  <Button variant="outlined" component={Link} to="/foods"
-                          onClick={() => this.setState({ focusName: true })}>add some!</Button>
                 </div>
               }
               <RadioGroup
@@ -230,7 +244,20 @@ class App extends Component {
           <Route path="/foods" render={() =>
             <React.Fragment>
               {
-                !!this.state.foods.length &&
+                this.state.loadingFoods &&
+                <div className="spinner-container">
+                  <CircularProgress/>
+                </div>
+              }
+              {
+                !this.state.loadingFoods && !this.state.foods.length &&
+                <div className="no-foods">
+                  <div>No foods yet...</div>
+                  <Button variant="outlined" onClick={this.loadExamples} >Load some examples</Button>
+                </div>
+              }
+              {
+                !this.state.loadingFoods && !!this.state.foods.length &&
                 <div className="table table--foods">
                   <label className="cell head" >Name</label>
                   <span className="cell head">Calories</span>
@@ -246,24 +273,17 @@ class App extends Component {
                         <span className="cell">{food.weight}</span>
                         <span className="cell">{food.protein}</span>
                         <span className="cell action">
-                          <IconButton onClick={() => this.deleteFood(food.name)} title="Delete">
-                            <DeleteIcon />
-                          </IconButton>
                           <IconButton onClick={() => this.editFood(food)} title="Edit">
                             <EditIcon />
+                          </IconButton>
+                          <IconButton onClick={() => this.deleteFood(food.name)} title="Delete">
+                            <DeleteIcon />
                           </IconButton>
                         </span>
                         <div className="break"></div>
                       </React.Fragment>
                     )
                   }
-                </div>
-              }
-              {
-                !this.state.foods.length &&
-                <div className="no-foods">
-                  <div>No foods yet...</div>
-                  <Button variant="outlined" onClick={this.focusName} >add some!</Button>
                 </div>
               }
               <div className="table table--add-edit">
@@ -279,7 +299,7 @@ class App extends Component {
                 </label>
                 <div className="cell">
                   <TextField type="number" value={this.state.txtCalories} onInput={this.updateVal} name="txtCalories"
-                              inputRef={(calInput) => this.calInput = calInput} />
+                             inputRef={(calInput) => this.calInput = calInput} />
                 </div>
                 <div className="cell">
                   <TextField type="number" value={this.state.txtWeight} onInput={this.updateVal} name="txtWeight" />

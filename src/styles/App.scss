@@ -27,11 +27,13 @@ main {
   padding: 30px;
 }
 
+$content-height: 106px;
+
 .table {
   display: flex;
   flex-wrap: wrap;
   max-width: 650px;
-  min-height: 106px;
+  min-height: $content-height;
   margin: auto;
   align-content: flex-start;
 
@@ -102,6 +104,13 @@ main {
   a, button {
     margin-top: 10px;
   }
+}
+
+.spinner-container {
+  min-height: $content-height;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .radio-group {
