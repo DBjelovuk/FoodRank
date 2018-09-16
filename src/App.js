@@ -6,6 +6,13 @@ import './styles/App.css';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 
+import Paper from '@material-ui/core/Paper';
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableHead from '@material-ui/core/TableHead';
+import TableRow from '@material-ui/core/TableRow';
+
 import Button from '@material-ui/core/Button';
 
 import Radio from '@material-ui/core/Radio';
@@ -29,10 +36,10 @@ const defaults = [
   { name: 'Ground beef',      calories: 765,  protein: 95, weight: 450 },
   { name: 'Snack Pack jello', calories: 5,    protein: 0,  weight: 99 },
   { name: 'Potatoes',         calories: 297,  protein: 8,  weight: 400 },
-  { name: 'White Rice',       calories: 365,  protein: 7,  weight: 100 },
+  { name: 'White rice',       calories: 365,  protein: 7,  weight: 100 },
   { name: 'Ground turkey',    calories: 590,  protein: 82, weight: 454 },
   { name: 'Pepperoni pizza',  calories: 1290, protein: 50, weight: 537 },
-  { name: 'Breyers delights', calories: 280,  protein: 16, weight: 270 },
+  { name: 'Breyers Delights', calories: 280,  protein: 16, weight: 286 },
   { name: 'Broccoli',         calories: 34,   protein: 2.8, weight: 100 }
 ];
 
@@ -158,7 +165,7 @@ class App extends Component {
       <div className="App">
         <header className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
-          <h1 className="App-title">Welcome to FoodRank</h1>
+          <h1 className="App-title">{'{ FoodRank }'}</h1>
         </header>
         <nav>
           <Tabs value={this.state.page}
@@ -187,27 +194,54 @@ class App extends Component {
               }
               {
                 !this.state.loadingFoods && !!this.state.foods.length &&
-                <div className="table table--index">
-                  <label className="cell head">Food</label>
-                  <span className="cell head">Index</span>
-                  <div className="break"></div>
-                  {
-                    this.state.foods.map(food => {
-                      let index = food.calories ? (food.protein / food.calories * 100 * this.state.bulkWeight) +
-                                                  (food.weight / food.calories * 100 * this.state.cutWeight)
-                                                : Infinity;
-                      return { name: food.name, index }
-                    })
-                    .sort((a, b) => b.index - a.index)
-                    .map(food =>
-                      <React.Fragment>
-                        <label className="cell">{food.name}&nbsp;</label>
-                        <span className="cell">{Math.round(food.index)}</span>
-                        <div className="break"></div>
-                      </React.Fragment>
-                    )
-                  }
-                </div>
+                // <div className="table table--index">
+                //   <label className="cell head">Food</label>
+                //   <span className="cell head">Index</span>
+                //   <div className="break"></div>
+                //   {
+                //     this.state.foods.map(food => {
+                //       let index = food.calories ? (food.protein / food.calories * 100 * this.state.bulkWeight) +
+                //                                   (food.weight / food.calories * 100 * this.state.cutWeight)
+                //                                 : Infinity;
+                //       return { name: food.name, index }
+                //     })
+                //     .sort((a, b) => b.index - a.index)
+                //     .map(food =>
+                //       <React.Fragment>
+                //         <label className="cell">{food.name}&nbsp;</label>
+                //         <span className="cell">{Math.round(food.index)}</span>
+                //         <div className="break"></div>
+                //       </React.Fragment>
+                //     )
+                //   }
+                // </div>
+                <Paper className="table table--index">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Food</TableCell>
+                        <TableCell>Index</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {
+                        this.state.foods.map(food => {
+                          let index = food.calories ? (food.protein / food.calories * 100 * this.state.bulkWeight) +
+                                                      (food.weight / food.calories * 100 * this.state.cutWeight)
+                                                    : Infinity;
+                          return { name: food.name, index }
+                        })
+                        .sort((a, b) => b.index - a.index)
+                        .map(food =>
+                          <TableRow>
+                            <TableCell>{food.name}</TableCell>
+                            <TableCell>{Math.round(food.index)}</TableCell>
+                          </TableRow>
+                        )
+                      }
+                    </TableBody>
+                  </Table>
+                </Paper>
               }
               <RadioGroup
                 name="goal"
@@ -219,17 +253,17 @@ class App extends Component {
               >
                 <FormControlLabel
                   value="bulk"
-                  control={<Radio/>}
+                  control={<Radio color="primary"/>}
                   label="Bulk (protein density)"
                 />
                 <FormControlLabel
                   value="cut"
-                  control={<Radio/>}
+                  control={<Radio color="primary"/>}
                   label="Cut (satiety)"
                 />
                 <FormControlLabel
                   value="hybrid"
-                  control={<Radio/>}
+                  control={<Radio color="primary"/>}
                   label="Hybrid (1:2 weighting)"
                 />
               </RadioGroup>

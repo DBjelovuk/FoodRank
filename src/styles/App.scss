@@ -37,6 +37,27 @@ $content-height: 106px;
   margin: auto;
   align-content: flex-start;
 
+  tr {
+    height: auto;
+  }
+  th, td {
+    font-size: 14px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+
+    &:not(:first-child) {
+      text-align: right;
+      padding: 10px 15px;
+    }
+  }
+  th {
+    font-weight: 500;
+    background-color: #3f51b5;
+    color: #fff;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
   .head {
     font-weight: bold;
     margin-bottom: 5px;
@@ -47,7 +68,7 @@ $content-height: 106px;
   }
 
   &--index {
-    max-width: 250px;
+    max-width: 300px;
 
     .head {
       margin-bottom: 10px;
