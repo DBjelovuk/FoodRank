@@ -18,17 +18,21 @@ import Button from '@material-ui/core/Button';
 import Radio from '@material-ui/core/Radio';
 import RadioGroup from '@material-ui/core/RadioGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Slider from '@material-ui/lab/Slider';
 
 import IconButton from '@material-ui/core/IconButton';
 import DeleteIcon from '@material-ui/icons/Delete';
 import EditIcon from '@material-ui/icons/Edit';
 import SaveIcon from '@material-ui/icons/Save';
 import ClearIcon from '@material-ui/icons/Clear';
+import HelpIcon from '@material-ui/icons/Help';
 
 import TextField from '@material-ui/core/TextField';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
+
+import Popover from '@material-ui/core/Popover';
+
+import RootRef from '@material-ui/core/RootRef';
 
 const defaults = [
   { name: 'Pure Protein bar', calories: 200,  protein: 20, weight: 50 },
@@ -51,7 +55,7 @@ class App extends Component {
     loadingFoods: true,
     bulkWeight: 0,
     cutWeight: 1,
-    goal: 'cut'
+    goal: 'cbulk'
   };
 
   foodDB;
@@ -194,27 +198,6 @@ class App extends Component {
               }
               {
                 !this.state.loadingFoods && !!this.state.foods.length &&
-                // <div className="table table--index">
-                //   <label className="cell head">Food</label>
-                //   <span className="cell head">Index</span>
-                //   <div className="break"></div>
-                //   {
-                //     this.state.foods.map(food => {
-                //       let index = food.calories ? (food.protein / food.calories * 100 * this.state.bulkWeight) +
-                //                                   (food.weight / food.calories * 100 * this.state.cutWeight)
-                //                                 : Infinity;
-                //       return { name: food.name, index }
-                //     })
-                //     .sort((a, b) => b.index - a.index)
-                //     .map(food =>
-                //       <React.Fragment>
-                //         <label className="cell">{food.name}&nbsp;</label>
-                //         <span className="cell">{Math.round(food.index)}</span>
-                //         <div className="break"></div>
-                //       </React.Fragment>
-                //     )
-                //   }
-                // </div>
                 <Paper className="table table--index">
                   <Table>
                     <TableHead>
@@ -226,9 +209,12 @@ class App extends Component {
                     <TableBody>
                       {
                         this.state.foods.map(food => {
-                          let index = food.calories ? (food.protein / food.calories * 100 * this.state.bulkWeight) +
-                                                      (food.weight / food.calories * 100 * this.state.cutWeight)
-                                                    : Infinity;
+                          let index = this.state.goal === 'cbulk'  ? food.protein / food.calories * 100 :
+                                      this.state.goal === 'dbulk' ? food.protein / food.weight * 100 :
+                                                                    food.weight / food.calories * 100;
+                          // let index = food.calories ? (food.protein / food.calories * 100 * this.state.bulkWeight) +
+                          //                             (food.weight / food.calories * 100 * this.state.cutWeight)
+                          //                           : Infinity;
                           return { name: food.name, index }
                         })
                         .sort((a, b) => b.index - a.index)
@@ -248,108 +234,164 @@ class App extends Component {
                 className="radio-group"
                 row={true}
                 onChange={this.changeGoal}
-                onClick={this.changeGoal}
                 value={this.state.goal}
               >
                 <FormControlLabel
-                  value="bulk"
+                  value="cbulk"
                   control={<Radio color="primary"/>}
-                  label="Bulk (protein density)"
+                  label="Clean bulk"
+                  onClick={this.changeGoal}
+                  ref={(cbulkLbl) => this.cbulkLbl = cbulkLbl}
                 />
+                <RootRef rootRef={(cbulkHelp) => this.cbulkHelp = cbulkHelp}>
+                  <IconButton onClick={() => this.setState({ cbulkOpen: true })} >
+                    <HelpIcon />
+                  </IconButton>
+                </RootRef>
+                <Popover
+                  classes={{ paper: 'popover' }}
+                  open={this.state.cbulkOpen}
+                  anchorEl={this.cbulkHelp}
+                  onClose={() => this.setState({ cbulkOpen: false })}
+                  anchorOrigin={{ horizontal: 'right' }}
+                >
+                  <p>Ranked by a ratio of <b>protein/calories</b>.</p>
+                </Popover>
+                <FormControlLabel
+                  value="dbulk"
+                  control={<Radio color="primary"/>}
+                  label="Dirty bulk"
+                  onClick={this.changeGoal}
+                />
+                <RootRef rootRef={(dbulkHelp) => this.dbulkHelp = dbulkHelp}>
+                  <IconButton onClick={() => this.setState({ dbulkOpen: true })} >
+                    <HelpIcon />
+                  </IconButton>
+                </RootRef>
+                <Popover
+                  classes={{ paper: 'popover' }}
+                  open={this.state.dbulkOpen}
+                  anchorEl={this.dbulkHelp}
+                  onClose={() => this.setState({ dbulkOpen: false })}
+                  anchorOrigin={{ horizontal: 'right' }}
+                >
+                  <p>Ranked by a ratio of <b>protein/weight</b>.</p>
+                </Popover>
                 <FormControlLabel
                   value="cut"
                   control={<Radio color="primary"/>}
-                  label="Cut (satiety)"
+                  label="Cut"
+                  onClick={this.changeGoal}
                 />
-                <FormControlLabel
-                  value="hybrid"
-                  control={<Radio color="primary"/>}
-                  label="Hybrid (1:2 weighting)"
-                />
+                <RootRef rootRef={(cutHelp) => this.cutHelp = cutHelp}>
+                  <IconButton onClick={() => this.setState({ cutOpen: true })} >
+                    <HelpIcon />
+                  </IconButton>
+                </RootRef>
+                <Popover
+                  classes={{ paper: 'popover' }}
+                  open={this.state.cutOpen}
+                  anchorEl={this.cutHelp}
+                  onClose={() => this.setState({ cutOpen: false })}
+                  anchorOrigin={{ horizontal: 'right' }}
+                >
+                  <p>Ranked by a ratio of <b>weight/calories</b>.</p>
+                </Popover>
               </RadioGroup>
-              <br/>
-              <Slider className="slider" min={0} max={100} onChange={this.sliderChanged} value={this.state.cutWeight * 100} />
-              <div className="weights">
-                <span>{Math.round(this.state.bulkWeight * 100)}</span>
-                <span>{Math.round(this.state.cutWeight * 100)}</span>
-              </div>
             </React.Fragment>
           } />
           <Route path="/foods" render={() =>
             <React.Fragment>
-              {
-                this.state.loadingFoods &&
-                <div className="spinner-container">
-                  <CircularProgress/>
-                </div>
-              }
-              {
-                !this.state.loadingFoods && !this.state.foods.length &&
-                <div className="no-foods">
-                  <div>No foods yet...</div>
-                  <Button variant="outlined" onClick={this.loadExamples} >Load some examples</Button>
-                </div>
-              }
-              {
-                !this.state.loadingFoods && !!this.state.foods.length &&
-                <div className="table table--foods">
-                  <label className="cell head" >Name</label>
-                  <span className="cell head">Calories</span>
-                  <span className="cell head">Weight (g)</span>
-                  <span className="cell head">Protein (g)</span>
-                  <span className="cell action"></span>
-                  <div className="break"/>
-                  {
-                    this.state.foods.map(food =>
-                      <React.Fragment>
-                        <label className="cell">{food.name}</label>
-                        <span className="cell">{food.calories}</span>
-                        <span className="cell">{food.weight}</span>
-                        <span className="cell">{food.protein}</span>
-                        <span className="cell action">
-                          <IconButton onClick={() => this.editFood(food)} title="Edit">
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton onClick={() => this.deleteFood(food.name)} title="Delete">
-                            <DeleteIcon />
-                          </IconButton>
-                        </span>
-                        <div className="break"></div>
-                      </React.Fragment>
-                    )
-                  }
-                </div>
-              }
-              <div className="table table--add-edit">
-                <label className="cell head" >Name</label>
-                <span className="cell head">Calories</span>
-                <span className="cell head">Weight (g)</span>
-                <span className="cell head">Protein (g)</span>
-                <span className="cell action"></span>
-                <div className="break"></div>
-                <label className="cell">
-                  <TextField value={this.state.txtName} onInput={this.updateVal} name="txtName"
-                              inputRef={(nameInput) => this.nameInput = nameInput} />
-                </label>
-                <div className="cell">
-                  <TextField type="number" value={this.state.txtCalories} onInput={this.updateVal} name="txtCalories"
-                             inputRef={(calInput) => this.calInput = calInput} />
-                </div>
-                <div className="cell">
-                  <TextField type="number" value={this.state.txtWeight} onInput={this.updateVal} name="txtWeight" />
-                </div>
-                <div className="cell">
-                  <TextField type="number" value={this.state.txtProtein} onInput={this.updateVal} name="txtProtein" />
-                </div>
-                <span className="cell action">
-                  <IconButton onClick={this.addFood} title="Add/Update">
-                    <SaveIcon />
-                  </IconButton>
-                  <IconButton onClick={this.clearInputs} title="Clear fields">
-                    <ClearIcon />
-                  </IconButton>
-                </span>
+              <div className="foods-container">
+                {
+                  this.state.loadingFoods &&
+                  <div className="spinner-container">
+                    <CircularProgress/>
+                  </div>
+                }
+                {
+                  !this.state.loadingFoods && !this.state.foods.length &&
+                  <div className="no-foods">
+                    <div>No foods yet...</div>
+                    <Button variant="outlined" onClick={this.loadExamples} >Load some examples</Button>
+                  </div>
+                }
+                {
+                  !this.state.loadingFoods && !!this.state.foods.length &&
+                  <Paper className="table table--foods">
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Name</TableCell>
+                          <TableCell>Calories</TableCell>
+                          <TableCell>Weight (g)</TableCell>
+                          <TableCell>Protein (g)</TableCell>
+                          <TableCell colSpan={2}></TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {
+                          this.state.foods.map(food =>
+                            <TableRow>
+                              <TableCell>{food.name}</TableCell>
+                              <TableCell>{food.calories}</TableCell>
+                              <TableCell>{food.weight}</TableCell>
+                              <TableCell>{food.protein}</TableCell>
+                              <TableCell>
+                                <IconButton onClick={() => this.editFood(food)} title="Edit">
+                                  <EditIcon />
+                                </IconButton>
+                                <IconButton onClick={() => this.deleteFood(food.name)} title="Delete">
+                                  <DeleteIcon />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        }
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                }
               </div>
+              <Paper className="table table--add-edit">
+                <div>
+                  <label className="cell head" >Name</label>
+                  <label className="cell">
+                    <TextField value={this.state.txtName} onInput={this.updateVal} name="txtName"
+                               inputRef={(nameInput) => this.nameInput = nameInput} />
+                  </label>
+                </div>
+                <div>
+                  <span className="cell head">Calories</span>
+                  <div className="cell">
+                    <TextField type="number" value={this.state.txtCalories} onInput={this.updateVal} name="txtCalories"
+                               inputRef={(calInput) => this.calInput = calInput} />
+                  </div>
+                </div>
+                <div>
+                  <span className="cell head">Weight (g)</span>
+                  <div className="cell">
+                    <TextField type="number" value={this.state.txtWeight} onInput={this.updateVal} name="txtWeight" />
+                  </div>
+                </div>
+                <div>
+                  <span className="cell head">Protein (g)</span>
+                  <div className="cell">
+                    <TextField type="number" value={this.state.txtProtein} onInput={this.updateVal} name="txtProtein" />
+                  </div>
+                </div>
+                <div>
+                  <span className="cell head" />
+                  <span className="cell action">
+                    <IconButton onClick={this.addFood} title="Add/Update">
+                      <SaveIcon />
+                    </IconButton>
+                    <IconButton onClick={this.clearInputs} title="Clear fields">
+                      <ClearIcon />
+                    </IconButton>
+                  </span>
+                </div>
+              </Paper>
             </React.Fragment>
           } />
         </main>
