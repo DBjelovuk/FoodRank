@@ -2,7 +2,6 @@
   text-align: center;
 }
 .App-logo {
-  animation: App-logo-spin infinite 20s linear;
   height: 80px;
 }
 .App-header {
@@ -170,6 +169,7 @@ main {
 .popover {
   padding: 16px;
   font-size: 14px;
+  cursor: default;
 
   p {
     margin: 0 0 5px;
@@ -177,6 +177,9 @@ main {
     &:last-child {
       margin-bottom: 0;
     }
+  }
+  label {
+    margin-bottom: -15px;
   }
 }
 
@@ -190,6 +193,34 @@ main {
   margin: auto;
   justify-content: space-between;
   max-width: 150px;
+}
+
+.btn-signin {
+  position: absolute !important;
+  right: 15px;;
+}
+
+.modal-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 300px;
+  padding: 30px;
+
+  img {
+    width: 80%;
+    cursor: pointer;
+  }
+
+  &:focus {
+    outline: none;
+  }
 }
 
 @keyframes App-logo-spin {

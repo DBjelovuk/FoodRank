@@ -17,6 +17,7 @@ import Button from '@material-ui/core/Button';
 
 import Radio from '@material-ui/core/Radio';
 import RadioGroup from '@material-ui/core/RadioGroup';
+import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 
 import IconButton from '@material-ui/core/IconButton';
@@ -30,7 +31,10 @@ import TextField from '@material-ui/core/TextField';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 
-import Popover from '@material-ui/core/Popover';
+import Popper from '@material-ui/core/Popper';
+import ClickAwayListener from '@material-ui/core/ClickAwayListener';
+import Fade from '@material-ui/core/Fade';
+import Modal from '@material-ui/core/Modal';
 
 import RootRef from '@material-ui/core/RootRef';
 
@@ -47,6 +51,13 @@ const defaults = [
   { name: 'Broccoli',         calories: 34,   protein: 2.8, weight: 100 }
 ];
 
+let foodDB;
+
+const firebase = window.firebase;
+const googleAuthProvider = new firebase.auth.GoogleAuthProvider();
+
+const popperFadeMs = 350;
+
 class App extends Component {
 
   state = {
@@ -55,29 +66,34 @@ class App extends Component {
     loadingFoods: true,
     bulkWeight: 0,
     cutWeight: 1,
-    goal: 'cbulk'
+    goal: 'cbulk',
+    user: null
   };
-
-  foodDB;
 
   constructor() {
     super();
 
-    var request = indexedDB.open("FoodRank", 1);
+    let request = indexedDB.open("FoodRank", 1);
 
     request.onsuccess = (e) => {
-      this.foodDB = e.target.result;
+      foodDB = e.target.result;
       this.getFoods();
     };
 
     request.onupgradeneeded = (e) => {
-      var db = e.target.result;
+      let db = e.target.result;
 
       if (db.objectStoreNames.contains("food")) {
         db.deleteObjectStore("food");
       }
       db.createObjectStore("food", {keyPath: "name"});
     };
+
+    firebase.auth().onAuthStateChanged((user) => {
+      this.setState({ user });
+    });
+
+    this.state.noPromptChk = JSON.parse(localStorage.getItem('noPromptChk'));
   }
 
   componentWillMount() {
@@ -88,26 +104,37 @@ class App extends Component {
   }
 
   getFoods = () => {
-    let trans = this.foodDB.transaction("food", "readonly");
+    let trans = foodDB.transaction("food", "readonly");
     trans.objectStore("food").getAll().onsuccess = (e) => {
-      this.setState({ ...this.state, foods: e.target.result, loadingFoods: false },);
+      this.setState({ foods: e.target.result, loadingFoods: false },);
     }
   }
 
+  shouldShowSigninPrompt = () => !this.state.user && !this.state.supressPrompt && !this.state.noPromptChk;
+
   addFood = () => {
-    let trans = this.foodDB.transaction("food", "readwrite");
+    let trans = foodDB.transaction("food", "readwrite");
     let store = trans.objectStore("food");
     let state = this.state;
     store.put({ name: state.txtName,
                 calories: Number(state.txtCalories) || 0, weight: Number(state.txtWeight) || 0, protein: Number(state.txtProtein) || 0 });
-    this.setState({ ...state, txtName: '', txtCalories: '', txtWeight: '', txtProtein: '' });
+    let signinPromptOpen = this.shouldShowSigninPrompt();
+    this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '', signinPromptOpen });
+    if (signinPromptOpen) {
+      this.btnSignin.focus();
+    }
     this.getFoods();
   }
 
   deleteFood = (foodName) => {
-    let trans = this.foodDB.transaction("food", "readwrite");
+    let trans = foodDB.transaction("food", "readwrite");
     let store = trans.objectStore("food");
     store.delete(foodName);
+    let signinPromptOpen = this.shouldShowSigninPrompt();
+    if (signinPromptOpen) {
+      this.setState({ signinPromptOpen });
+      this.btnSignin.focus();
+    }
     this.getFoods();
   }
 
@@ -155,7 +182,7 @@ class App extends Component {
 
   loadExamples = () => {
     this.setState({ loadingFoods: true }, () => {
-      let trans = this.foodDB.transaction("food", "readwrite");
+      let trans = foodDB.transaction("food", "readwrite");
       let store = trans.objectStore("food");
       defaults.forEach((food) => {
         store.put(food);
@@ -164,16 +191,79 @@ class App extends Component {
     });
   }
 
+  signIn = () => {
+    firebase.auth().signInWithPopup(googleAuthProvider)
+      .then((user) => {
+        this.setState({ isSigninOpen: false });
+        if (this.state.foods.length) {
+          // TODO
+        }
+      });
+  }
+
+  signinClicked = () => {
+    if (!this.state.user) {
+      this.setState({ isSigninOpen: true });
+    }
+    else {
+      firebase.auth().signOut();
+    }
+  }
+
+  noPromptChkChange = (e) => {
+    let noPromptChk = e.target.checked;
+    this.setState({ noPromptChk });
+    localStorage.setItem('noPromptChk', noPromptChk);
+  }
+
   render() {
     return (
       <div className="App">
         <header className="App-header">
+          <Button className="btn-signin"
+                  variant="contained" color="primary"
+                  buttonRef={(btnSignin) => this.btnSignin = btnSignin}
+                  onClick={this.signinClicked}>{`Sign ${!this.state.user ? 'in' : 'out'}`}</Button>
+          <Popper
+            open={this.state.signinPromptOpen}
+            anchorEl={this.btnSignin}
+            placement="bottom-end"
+          >
+            <ClickAwayListener onClickAway={() => this.setState({ signinPromptOpen: false, supressPrompt: true })}>
+              <Fade in={this.state.signinPromptOpen} timeout={popperFadeMs}>
+                <Paper className="popover">
+                  <p>Sign in to sync your foods across devices.</p>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={this.state.noPromptChk}
+                        onChange={this.noPromptChkChange}
+                        color="primary"
+                      />
+                    }
+                    label="Don't show this again"
+                    onClick={this.changeGoal}
+                    ref={(cbulkLbl) => this.cbulkLbl = cbulkLbl}
+                  />
+                </Paper>
+              </Fade>
+            </ClickAwayListener>
+          </Popper>
+          <Modal
+            className="modal-container"
+            open={this.state.isSigninOpen}
+            onClose={() => this.setState({ isSigninOpen: false })}
+          >
+            <Paper className="modal">
+              <img src="/images/signin_google.png" onClick={this.signIn}/>
+            </Paper>
+          </Modal>
           <img src={logo} className="App-logo" alt="logo" />
           <h1 className="App-title">{'{ FoodRank }'}</h1>
         </header>
         <nav>
           <Tabs value={this.state.page}
-                onChange={(e,i) => this.setState({ page: i })}
+                onChange={(e, i) => this.setState({ page: i })}
                 centered={true}>
             <Tab label="Ranking" component={Link} to="/" value="/" />
             <Tab label="Foods" component={Link} to="/foods" value="/foods" />
@@ -209,12 +299,10 @@ class App extends Component {
                     <TableBody>
                       {
                         this.state.foods.map(food => {
-                          let index = this.state.goal === 'cbulk'  ? food.protein / food.calories * 100 :
+                          let index = !food.calories ? Infinity :
+                                      this.state.goal === 'cbulk'  ? food.protein / food.calories * 100 :
                                       this.state.goal === 'dbulk' ? food.protein / food.weight * 100 :
                                                                     food.weight / food.calories * 100;
-                          // let index = food.calories ? (food.protein / food.calories * 100 * this.state.bulkWeight) +
-                          //                             (food.weight / food.calories * 100 * this.state.cutWeight)
-                          //                           : Infinity;
                           return { name: food.name, index }
                         })
                         .sort((a, b) => b.index - a.index)
@@ -248,15 +336,19 @@ class App extends Component {
                     <HelpIcon />
                   </IconButton>
                 </RootRef>
-                <Popover
-                  classes={{ paper: 'popover' }}
+                <Popper
                   open={this.state.cbulkOpen}
                   anchorEl={this.cbulkHelp}
-                  onClose={() => this.setState({ cbulkOpen: false })}
-                  anchorOrigin={{ horizontal: 'right' }}
+                  placement="right-start"
                 >
-                  <p>Ranked by a ratio of <b>protein/calories</b>.</p>
-                </Popover>
+                  <ClickAwayListener onClickAway={() => this.setState({ cbulkOpen: false })}>
+                    <Fade in={this.state.cbulkOpen} timeout={popperFadeMs}>
+                      <Paper className="popover">
+                        <p>Ranked by a ratio of <b>protein/calories</b>.</p>
+                      </Paper>
+                    </Fade>
+                  </ClickAwayListener>
+                </Popper>
                 <FormControlLabel
                   value="dbulk"
                   control={<Radio color="primary"/>}
@@ -268,15 +360,19 @@ class App extends Component {
                     <HelpIcon />
                   </IconButton>
                 </RootRef>
-                <Popover
-                  classes={{ paper: 'popover' }}
+                <Popper
                   open={this.state.dbulkOpen}
                   anchorEl={this.dbulkHelp}
-                  onClose={() => this.setState({ dbulkOpen: false })}
-                  anchorOrigin={{ horizontal: 'right' }}
+                  placement="right-start"
                 >
-                  <p>Ranked by a ratio of <b>protein/weight</b>.</p>
-                </Popover>
+                  <ClickAwayListener onClickAway={() => this.setState({ dbulkOpen: false })}>
+                    <Fade in={this.state.dbulkOpen} timeout={popperFadeMs}>
+                      <Paper className="popover">
+                        <p>Ranked by a ratio of <b>protein/weight</b>.</p>
+                      </Paper>
+                    </Fade>
+                  </ClickAwayListener>
+                </Popper>
                 <FormControlLabel
                   value="cut"
                   control={<Radio color="primary"/>}
@@ -288,15 +384,19 @@ class App extends Component {
                     <HelpIcon />
                   </IconButton>
                 </RootRef>
-                <Popover
-                  classes={{ paper: 'popover' }}
+                <Popper
                   open={this.state.cutOpen}
                   anchorEl={this.cutHelp}
-                  onClose={() => this.setState({ cutOpen: false })}
-                  anchorOrigin={{ horizontal: 'right' }}
+                  placement="right-start"
                 >
-                  <p>Ranked by a ratio of <b>weight/calories</b>.</p>
-                </Popover>
+                  <ClickAwayListener onClickAway={() => this.setState({ cutOpen: false })}>
+                    <Fade in={this.state.cutOpen} timeout={popperFadeMs}>
+                      <Paper className="popover">
+                        <p>Ranked by a ratio of <b>weight/calories</b>.</p>
+                      </Paper>
+                    </Fade>
+                  </ClickAwayListener>
+                </Popper>
               </RadioGroup>
             </React.Fragment>
           } />
