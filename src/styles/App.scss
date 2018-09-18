@@ -221,6 +221,10 @@ main {
   &:focus {
     outline: none;
   }
+
+  button {
+    margin-right: 10px;
+  }
 }
 
 @keyframes App-logo-spin {

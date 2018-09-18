@@ -52,8 +52,11 @@ const defaults = [
 ];
 
 let foodDB;
+let firebaseDoc;
 
 const firebase = window.firebase;
+const firestore = firebase.firestore();
+firestore.settings({ timestampsInSnapshots: true });
 const googleAuthProvider = new firebase.auth.GoogleAuthProvider();
 
 const popperFadeMs = 350;
@@ -67,30 +70,29 @@ class App extends Component {
     bulkWeight: 0,
     cutWeight: 1,
     goal: 'cbulk',
-    user: null
+    user: null,
+    cbulkOpen: false,
+    dbulkOpen: false,
+    cutOpen: false,
+    txtName: '',
+    txtCalories: '',
+    txtWeight: '',
+    txtProtein: '',
+    isSigninOpen: false,
+    signinPromptOpen: false,
+    isTransferOpen: false
   };
 
   constructor() {
     super();
 
-    let request = indexedDB.open("FoodRank", 1);
-
-    request.onsuccess = (e) => {
-      foodDB = e.target.result;
-      this.getFoods();
-    };
-
-    request.onupgradeneeded = (e) => {
-      let db = e.target.result;
-
-      if (db.objectStoreNames.contains("food")) {
-        db.deleteObjectStore("food");
-      }
-      db.createObjectStore("food", {keyPath: "name"});
-    };
-
     firebase.auth().onAuthStateChanged((user) => {
-      this.setState({ user });
+      this.setState({ user, loadingFoods: true }, () => {
+        if (user) {
+          firebaseDoc = firestore.collection('user_foods').doc(user.uid);
+        }
+        this.getFoods();
+      });
     });
 
     this.state.noPromptChk = JSON.parse(localStorage.getItem('noPromptChk'));
@@ -103,37 +105,88 @@ class App extends Component {
     });
   }
 
+  arrayToDoc(array, keyProp) {
+    let doc = {};
+    array.forEach((el, i) => doc[el[keyProp] || i] = el);
+    return doc;
+  }
+
   getFoods = () => {
-    let trans = foodDB.transaction("food", "readonly");
-    trans.objectStore("food").getAll().onsuccess = (e) => {
-      this.setState({ foods: e.target.result, loadingFoods: false },);
+    if (this.state.user) {
+      firebaseDoc.get().then((doc) => {
+        if (doc.exists) {
+          let foods = [];
+          let foodsDoc = doc.data();
+          for (const food in foodsDoc) {
+            foods.push(foodsDoc[food]);
+          }
+          this.setState({ foods, loadingFoods: false });
+        }
+      });
+    }
+    else {
+      let request = indexedDB.open("FoodRank", 1);
+
+      request.onsuccess = (e) => {
+        foodDB = e.target.result;
+
+        let trans = foodDB.transaction("food", "readonly");
+        trans.objectStore("food").getAll().onsuccess = (e) => {
+          this.setState({ foods: e.target.result, loadingFoods: false },);
+        }
+      };
+
+      request.onupgradeneeded = (e) => {
+        let db = e.target.result;
+
+        if (db.objectStoreNames.contains("food")) {
+          db.deleteObjectStore("food");
+        }
+        db.createObjectStore("food", { keyPath: "name" });
+      };
     }
   }
 
   shouldShowSigninPrompt = () => !this.state.user && !this.state.supressPrompt && !this.state.noPromptChk;
 
   addFood = () => {
-    let trans = foodDB.transaction("food", "readwrite");
-    let store = trans.objectStore("food");
-    let state = this.state;
-    store.put({ name: state.txtName,
-                calories: Number(state.txtCalories) || 0, weight: Number(state.txtWeight) || 0, protein: Number(state.txtProtein) || 0 });
-    let signinPromptOpen = this.shouldShowSigninPrompt();
-    this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '', signinPromptOpen });
-    if (signinPromptOpen) {
-      this.btnSignin.focus();
+    let updatedFood = { name:     this.state.txtName,
+                        calories: Number(this.state.txtCalories) || 0,
+                        weight:   Number(this.state.txtWeight)   || 0,
+                        protein:  Number(this.state.txtProtein)  || 0 }
+
+    if (this.state.user) {
+      firebaseDoc.set({ [updatedFood.name]: updatedFood }, { merge: true })
+        .then(() => {
+          this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '' });
+        });
+    }
+    else {
+      let trans = foodDB.transaction("food", "readwrite");
+      let store = trans.objectStore("food");
+      store.put(updatedFood);
+      let signinPromptOpen = this.shouldShowSigninPrompt();
+      this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '', signinPromptOpen });
+      if (signinPromptOpen) {
+        this.btnSignin.focus();
+      }
     }
     this.getFoods();
   }
 
   deleteFood = (foodName) => {
-    let trans = foodDB.transaction("food", "readwrite");
-    let store = trans.objectStore("food");
-    store.delete(foodName);
-    let signinPromptOpen = this.shouldShowSigninPrompt();
-    if (signinPromptOpen) {
-      this.setState({ signinPromptOpen });
-      this.btnSignin.focus();
+    if (this.state.user) {
+      firebaseDoc.update({ [foodName]: firebase.firestore.FieldValue.delete() });
+    }
+    else {
+      let trans = foodDB.transaction("food", "readwrite");
+      let store = trans.objectStore("food");
+      store.delete(foodName);
+      let signinPromptOpen = this.shouldShowSigninPrompt();
+      if (signinPromptOpen) {
+        this.setState({ signinPromptOpen });
+        this.btnSignin.focus();
+      }
     }
     this.getFoods();
   }
@@ -157,16 +210,16 @@ class App extends Component {
   }
 
   updateVal = (e) => {
-    this.setState({...this.state, [e.target.name]: e.target.value });
+    this.setState({ [e.target.name]: e.target.value });
   }
 
   editFood = (food) => {
-    this.setState({ ...this.state, txtName: food.name, txtCalories: food.calories, txtWeight: food.weight, txtProtein: food.protein });
+    this.setState({ txtName: food.name, txtCalories: food.calories, txtWeight: food.weight, txtProtein: food.protein });
     this.calInput.focus();
   }
 
   clearInputs = () => {
-    this.setState({ ...this.state, txtName: '', txtCalories: '', txtWeight: '', txtProtein: '' });
+    this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '' });
   }
 
   focusName = () => {
@@ -182,22 +235,28 @@ class App extends Component {
 
   loadExamples = () => {
     this.setState({ loadingFoods: true }, () => {
-      let trans = foodDB.transaction("food", "readwrite");
-      let store = trans.objectStore("food");
-      defaults.forEach((food) => {
-        store.put(food);
-      });
-      this.getFoods();
+      if (this.state.user) {
+        let foodDoc = this.arrayToDoc(defaults, 'name');
+        firebaseDoc.set(foodDoc, { merge: true })
+          .then(() => this.getFoods());
+      }
+      else {
+        let trans = foodDB.transaction("food", "readwrite");
+        let store = trans.objectStore("food");
+        defaults.forEach((food) => {
+          store.put(food);
+        });
+        this.getFoods();
+      }
     });
   }
 
   signIn = () => {
     firebase.auth().signInWithPopup(googleAuthProvider)
       .then((user) => {
-        this.setState({ isSigninOpen: false });
-        if (this.state.foods.length) {
-          // TODO
-        }
+        this.setState({ isSigninOpen: false,
+                        isTransferOpen: !!this.state.foods.length,
+                        localFoods: this.state.foods }); // Preserve prior/local state of foods for transfer
       });
   }
 
@@ -214,6 +273,22 @@ class App extends Component {
     let noPromptChk = e.target.checked;
     this.setState({ noPromptChk });
     localStorage.setItem('noPromptChk', noPromptChk);
+  }
+
+  clearLocalStore = () => {
+    let trans = foodDB.transaction("food", "readwrite");
+    let store = trans.objectStore("food");
+    store.clear();
+  }
+
+  transferFoods = () => {
+    let foodDoc = this.arrayToDoc(this.state.localFoods, 'name');
+    firebaseDoc.set(foodDoc, { merge: true })
+      .then(() => {
+        this.clearLocalStore();
+        this.setState({ isTransferOpen: false, loadingFoods: true });
+        this.getFoods();
+      });
   }
 
   render() {
@@ -242,8 +317,6 @@ class App extends Component {
                       />
                     }
                     label="Don't show this again"
-                    onClick={this.changeGoal}
-                    ref={(cbulkLbl) => this.cbulkLbl = cbulkLbl}
                   />
                 </Paper>
               </Fade>
@@ -307,7 +380,7 @@ class App extends Component {
                         })
                         .sort((a, b) => b.index - a.index)
                         .map(food =>
-                          <TableRow>
+                          <TableRow key={food.name}>
                             <TableCell>{food.name}</TableCell>
                             <TableCell>{Math.round(food.index)}</TableCell>
                           </TableRow>
@@ -328,8 +401,6 @@ class App extends Component {
                   value="cbulk"
                   control={<Radio color="primary"/>}
                   label="Clean bulk"
-                  onClick={this.changeGoal}
-                  ref={(cbulkLbl) => this.cbulkLbl = cbulkLbl}
                 />
                 <RootRef rootRef={(cbulkHelp) => this.cbulkHelp = cbulkHelp}>
                   <IconButton onClick={() => this.setState({ cbulkOpen: true })} >
@@ -353,7 +424,6 @@ class App extends Component {
                   value="dbulk"
                   control={<Radio color="primary"/>}
                   label="Dirty bulk"
-                  onClick={this.changeGoal}
                 />
                 <RootRef rootRef={(dbulkHelp) => this.dbulkHelp = dbulkHelp}>
                   <IconButton onClick={() => this.setState({ dbulkOpen: true })} >
@@ -377,7 +447,6 @@ class App extends Component {
                   value="cut"
                   control={<Radio color="primary"/>}
                   label="Cut"
-                  onClick={this.changeGoal}
                 />
                 <RootRef rootRef={(cutHelp) => this.cutHelp = cutHelp}>
                   <IconButton onClick={() => this.setState({ cutOpen: true })} >
@@ -432,7 +501,7 @@ class App extends Component {
                       <TableBody>
                         {
                           this.state.foods.map(food =>
-                            <TableRow>
+                            <TableRow key={food.name}>
                               <TableCell>{food.name}</TableCell>
                               <TableCell>{food.calories}</TableCell>
                               <TableCell>{food.weight}</TableCell>
@@ -494,6 +563,19 @@ class App extends Component {
               </Paper>
             </React.Fragment>
           } />
+          <Modal
+            className="modal-container"
+            open={this.state.isTransferOpen}
+            onClose={() => this.setState({ isTransferOpen: false })}
+          >
+            <Paper className="modal">
+              <div>
+                <div>You have some foods saved locally. Would you like them transferred to your account?</div><br/>
+                <Button variant="contained" color="primary" onClick={this.transferFoods}>Let's do it</Button>
+                <Button variant="contained" color="primary" onClick={() => this.setState({ isTransferOpen: false })}>No thanks</Button>
+              </div>
+            </Paper>
+          </Modal>
         </main>
       </div>
     );
