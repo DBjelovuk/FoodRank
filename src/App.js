@@ -57,12 +57,12 @@ let firebaseDoc;
 const firebase = window.firebase;
 const firestore = firebase.firestore();
 firestore.settings({ timestampsInSnapshots: true });
+
 const googleAuthProvider = new firebase.auth.GoogleAuthProvider();
 
 const popperFadeMs = 350;
 
 class App extends Component {
-
   state = {
     page: '/',
     foods: [],
@@ -158,7 +158,8 @@ class App extends Component {
     if (this.state.user) {
       firebaseDoc.set({ [updatedFood.name]: updatedFood }, { merge: true })
         .then(() => {
-          this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '' });
+          this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '' })
+          this.getFoods();
         });
     }
     else {
@@ -170,13 +171,16 @@ class App extends Component {
       if (signinPromptOpen) {
         this.btnSignin.focus();
       }
+      this.getFoods();
     }
-    this.getFoods();
   }
 
   deleteFood = (foodName) => {
     if (this.state.user) {
-      firebaseDoc.update({ [foodName]: firebase.firestore.FieldValue.delete() });
+      firebaseDoc.update({ [foodName]: firebase.firestore.FieldValue.delete() })
+        .then(() => {
+          this.getFoods();
+        });
     }
     else {
       let trans = foodDB.transaction("food", "readwrite");
@@ -187,8 +191,8 @@ class App extends Component {
         this.setState({ signinPromptOpen });
         this.btnSignin.focus();
       }
+      this.getFoods();
     }
-    this.getFoods();
   }
 
   changeGoal = (e) => {
@@ -246,6 +250,11 @@ class App extends Component {
         defaults.forEach((food) => {
           store.put(food);
         });
+        let signinPromptOpen = this.shouldShowSigninPrompt();
+        if (signinPromptOpen) {
+          this.setState({ signinPromptOpen });
+          this.btnSignin.focus();
+        }
         this.getFoods();
       }
     });
