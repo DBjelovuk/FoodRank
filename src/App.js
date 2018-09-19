@@ -349,7 +349,7 @@ class App extends Component {
             anchorEl={this.btnSignin}
             placement="bottom-end"
           >
-            <ClickAwayListener onClickAway={() => this.setState({ signinPromptOpen: false, supressPrompt: true })}>
+            <ClickAwayListener mouseEvent="onClick" onClickAway={() => this.setState({ signinPromptOpen: false, supressPrompt: true })}>
               <Fade in={this.state.signinPromptOpen} timeout={popperFadeMs}>
                 <Paper className="popover">
                   <p>Sign in to sync your foods across devices.</p>
@@ -414,7 +414,7 @@ class App extends Component {
                 !this.state.loadingFoods && !this.state.foods.length &&
                 <div className="no-foods">
                   <div>No foods yet...</div>
-                  <Button variant="outlined" component={Link} to="/foods"
+                  <Button variant="contained" component={Link} to="/foods"
                           onClick={() => this.setState({ focusName: true })}>Add some</Button>
                 </div>
               }
@@ -471,7 +471,7 @@ class App extends Component {
                   anchorEl={this.cbulkHelp}
                   placement="right-start"
                 >
-                  <ClickAwayListener onClickAway={() => this.setState({ cbulkOpen: false })}>
+                  <ClickAwayListener mouseEvent="onClick" onClickAway={() => this.setState({ cbulkOpen: false })}>
                     <Fade in={this.state.cbulkOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
                         <p>Ranked by a ratio of <b>protein/calories</b>.</p>
@@ -495,7 +495,7 @@ class App extends Component {
                   anchorEl={this.dbulkHelp}
                   placement="right-start"
                 >
-                  <ClickAwayListener onClickAway={() => this.setState({ dbulkOpen: false })}>
+                  <ClickAwayListener mouseEvent="onClick" onClickAway={() => this.setState({ dbulkOpen: false })}>
                     <Fade in={this.state.dbulkOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
                         <p>Ranked by a ratio of <b>protein/weight</b>.</p>
@@ -519,7 +519,7 @@ class App extends Component {
                   anchorEl={this.cutHelp}
                   placement="right-start"
                 >
-                  <ClickAwayListener onClickAway={() => this.setState({ cutOpen: false })}>
+                  <ClickAwayListener mouseEvent="onClick" onClickAway={() => this.setState({ cutOpen: false })}>
                     <Fade in={this.state.cutOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
                         <p>Ranked by a ratio of <b>weight/calories</b>.</p>
@@ -544,7 +544,7 @@ class App extends Component {
                   !this.state.loadingFoods && !this.state.foods.length &&
                   <div className="no-foods">
                     <div>No foods yet...</div>
-                    <Button variant="outlined" onClick={this.loadExamples} >Load some examples</Button>
+                    <Button variant="contained" onClick={this.loadExamples} >Load some samples</Button>
                   </div>
                 }
                 {
