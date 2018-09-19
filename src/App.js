@@ -88,12 +88,15 @@ class App extends Component {
   constructor() {
     super();
 
+    this.state.noPromptChk = JSON.parse(localStorage.getItem('noPromptChk'));
+
     firebase.auth().onAuthStateChanged((user) => {
       this.setState({ user, loadingFoods: true }, () => {
         if (user) {
           firebaseDoc = firestore.collection('user_foods').doc(user.uid);
         }
 
+        if (foodDB) return;
         const request = indexedDB.open("FoodRank", 1);
         request.onsuccess = (e) => {
           foodDB = e.target.result;
@@ -109,8 +112,6 @@ class App extends Component {
         };
       });
     });
-
-    this.state.noPromptChk = JSON.parse(localStorage.getItem('noPromptChk'));
   }
 
   componentWillMount() {
