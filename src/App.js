@@ -327,11 +327,12 @@ class App extends Component {
   }
 
   transferFoods = () => {
+    this.setState({ isTransferOpen: false, loadingFoods: true });
+
     const foodDoc = this.arrayToDoc(this.state.localFoods, 'name');
     firebaseDoc.set(foodDoc, { merge: true })
       .then(() => {
         this.clearLocalStore();
-        this.setState({ isTransferOpen: false, loadingFoods: true });
         this.getFoods();
       });
   }
@@ -373,6 +374,7 @@ class App extends Component {
             onClose={() => this.setState({ isSigninOpen: false })}
           >
             <Paper className="modal">
+              <h2>Sign in</h2>
               <img src="/images/signin_google.png" onClick={() => this.signIn(googleAuthProvider)}/>
               <img src="/images/signin_facebook.png" onClick={() => this.signIn(facebookAuthProvider)}/>
             </Paper>
@@ -383,8 +385,9 @@ class App extends Component {
             onClose={() => this.setState({ alreadyExists: false })}
           >
             <Paper className="modal">
-              <div>Looks like the email associated with that account has already been registered under another provider. You can sign in with that provider instead, or link the two accounts.</div>
-              <div>
+              <h2>Existing email</h2>
+              <p>Looks like the email associated with that account has already been registered under another provider. You can sign in with that provider instead, or link the two accounts.</p>
+              <div className="cta">
                 <Button variant="contained" color="primary" onClick={() => this.signIn(this.state.newProvider)}>Sign in</Button>
                 <Button variant="contained" color="primary" onClick={() => this.signIn(this.state.newProvider, true)}>Sign in and link</Button>
               </div>
@@ -474,7 +477,7 @@ class App extends Component {
                   <ClickAwayListener mouseEvent="onClick" onClickAway={() => this.setState({ cbulkOpen: false })}>
                     <Fade in={this.state.cbulkOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
-                        <p>Ranked by a ratio of <b>protein/calories</b>.</p>
+                        <p>Ranked by ratio of <b>protein/calories</b>.</p>
                         <p>Foods highest in protein with least caloric impact.</p>
                       </Paper>
                     </Fade>
@@ -498,8 +501,8 @@ class App extends Component {
                   <ClickAwayListener mouseEvent="onClick" onClickAway={() => this.setState({ dbulkOpen: false })}>
                     <Fade in={this.state.dbulkOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
-                        <p>Ranked by a ratio of <b>protein/weight</b>.</p>
-                        <p>Foods highest in protein with lower overall mass.</p>
+                        <p>Ranked by ratio of <b>protein/weight</b>.</p>
+                        <p>Foods highest in protein with least overall mass.</p>
                       </Paper>
                     </Fade>
                   </ClickAwayListener>
@@ -522,8 +525,8 @@ class App extends Component {
                   <ClickAwayListener mouseEvent="onClick" onClickAway={() => this.setState({ cutOpen: false })}>
                     <Fade in={this.state.cutOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
-                        <p>Ranked by a ratio of <b>weight/calories</b>.</p>
-                        <p>Most filling/satiating foods per calorie.</p>
+                        <p>Ranked by ratio of <b>weight/calories</b>.</p>
+                        <p>Most filling foods with least caloric impact.</p>
                       </Paper>
                     </Fade>
                   </ClickAwayListener>
@@ -637,10 +640,9 @@ class App extends Component {
             onClose={() => this.setState({ isTransferOpen: false })}
           >
             <Paper className="modal">
-              <div>
-                You have some foods saved locally. Would you like them transferred to your account?
-              </div>
-              <div>
+              <h2>Existing foods</h2>
+              <p>You have some foods saved locally. Would you like them transferred to your account?</p>
+              <div className="cta">
                 <Button variant="contained" color="primary" onClick={this.transferFoods}>Let's do it</Button>
                 <Button variant="contained" color="primary" onClick={() => this.setState({ isTransferOpen: false })}>No thanks</Button>
               </div>
