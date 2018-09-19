@@ -81,7 +81,8 @@ class App extends Component {
     txtProtein: '',
     isSigninOpen: false,
     signinPromptOpen: false,
-    isTransferOpen: false
+    isTransferOpen: false,
+    isDeleting: {}
   };
 
   constructor() {
@@ -92,7 +93,20 @@ class App extends Component {
         if (user) {
           firebaseDoc = firestore.collection('user_foods').doc(user.uid);
         }
-        this.getFoods();
+
+        const request = indexedDB.open("FoodRank", 1);
+        request.onsuccess = (e) => {
+          foodDB = e.target.result;
+          this.getFoods();
+        }
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+
+          if (db.objectStoreNames.contains("food")) {
+            db.deleteObjectStore("food");
+          }
+          db.createObjectStore("food", { keyPath: "name" });
+        };
       });
     });
 
@@ -107,7 +121,7 @@ class App extends Component {
   }
 
   arrayToDoc(array, keyProp) {
-    let doc = {};
+    const doc = {};
     array.forEach((el, i) => doc[el[keyProp] || i] = el);
     return doc;
   }
@@ -116,8 +130,8 @@ class App extends Component {
     if (this.state.user) {
       firebaseDoc.get().then((doc) => {
         if (doc.exists) {
-          let foods = [];
-          let foodsDoc = doc.data();
+          const foods = [];
+          const foodsDoc = doc.data();
           for (const food in foodsDoc) {
             foods.push(foodsDoc[food]);
           }
@@ -126,24 +140,9 @@ class App extends Component {
       });
     }
     else {
-      let request = indexedDB.open("FoodRank", 1);
-
-      request.onsuccess = (e) => {
-        foodDB = e.target.result;
-
-        let trans = foodDB.transaction("food", "readonly");
-        trans.objectStore("food").getAll().onsuccess = (e) => {
-          this.setState({ foods: e.target.result, loadingFoods: false },);
-        }
-      };
-
-      request.onupgradeneeded = (e) => {
-        let db = e.target.result;
-
-        if (db.objectStoreNames.contains("food")) {
-          db.deleteObjectStore("food");
-        }
-        db.createObjectStore("food", { keyPath: "name" });
+      const trans = foodDB.transaction("food", "readonly");
+      trans.objectStore("food").getAll().onsuccess = (e) => {
+        this.setState({ foods: e.target.result, loadingFoods: false });
       };
     }
   }
@@ -151,53 +150,76 @@ class App extends Component {
   shouldShowSigninPrompt = () => !this.state.user && !this.state.supressPrompt && !this.state.noPromptChk;
 
   addFood = () => {
-    let updatedFood = { name:     this.state.txtName,
-                        calories: Number(this.state.txtCalories) || 0,
-                        weight:   Number(this.state.txtWeight)   || 0,
-                        protein:  Number(this.state.txtProtein)  || 0 }
+    const updatedFood = { name:     this.state.txtName,
+                          calories: Number(this.state.txtCalories) || 0,
+                          weight:   Number(this.state.txtWeight)   || 0,
+                          protein:  Number(this.state.txtProtein)  || 0 }
+
+    this.setState({ isUpdating: true });
 
     if (this.state.user) {
       firebaseDoc.set({ [updatedFood.name]: updatedFood }, { merge: true })
         .then(() => {
-          this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '' })
-          this.getFoods();
+          const foods = [ ...this.state.foods ];
+          const updated = foods.some((food, i) => {
+            if (food.name === updatedFood.name) {
+              foods[i] = updatedFood;
+              return true;
+            }
+          });
+          if (!updated) {
+            foods.push(updatedFood);
+          }
+          this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '', foods, isUpdating: false });
         });
     }
     else {
-      let trans = foodDB.transaction("food", "readwrite");
-      let store = trans.objectStore("food");
-      store.put(updatedFood);
-      let signinPromptOpen = this.shouldShowSigninPrompt();
-      this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '', signinPromptOpen });
-      if (signinPromptOpen) {
-        this.btnSignin.focus();
+      foodDB.transaction("food", "readwrite")
+            .objectStore("food")
+            .put(updatedFood)
+      .onsuccess = () => {
+        const signinPromptOpen = this.shouldShowSigninPrompt();
+        this.setState({ txtName: '', txtCalories: '', txtWeight: '', txtProtein: '', signinPromptOpen, isUpdating: false });
+        if (signinPromptOpen) {
+          this.btnSignin.focus();
+        }
+        this.getFoods();
       }
-      this.getFoods();
     }
   }
 
-  deleteFood = (foodName) => {
+  deleteFood = (food) => {
+    const isDeleting = { ...this.state.isDeleting, [food.name]: true };
+    this.setState({ isDeleting });
     if (this.state.user) {
-      firebaseDoc.update({ [foodName]: firebase.firestore.FieldValue.delete() })
+      firebaseDoc.update({ [food.name]: firebase.firestore.FieldValue.delete() })
         .then(() => {
-          this.getFoods();
+          const foods = [ ...this.state.foods ];
+          const index = foods.indexOf(food);
+          foods.splice(index, 1);
+
+          const isDeleting = { ...this.state.isDeleting, [food.name]: false };
+          this.setState({ foods, isDeleting });
         });
     }
     else {
-      let trans = foodDB.transaction("food", "readwrite");
-      let store = trans.objectStore("food");
-      store.delete(foodName);
-      let signinPromptOpen = this.shouldShowSigninPrompt();
-      if (signinPromptOpen) {
-        this.setState({ signinPromptOpen });
-        this.btnSignin.focus();
-      }
-      this.getFoods();
+      foodDB.transaction("food", "readwrite")
+            .objectStore("food")
+            .delete(food.name)
+      .onsuccess = () => {
+        const signinPromptOpen = this.shouldShowSigninPrompt();
+        const isDeleting = { ...this.state.isDeleting, [food.name]: false };
+        this.setState({ signinPromptOpen, isDeleting });
+        if (signinPromptOpen) {
+          this.btnSignin.focus();
+        }
+        this.getFoods();
+      };
     }
   }
 
   changeGoal = (e) => {
-    let goal = e.target.value;
+    const goal = e.target.value;
     if (goal === 'bulk') {
       this.setState({ bulkWeight: 1, cutWeight: 0, goal });
     }
@@ -210,7 +232,7 @@ class App extends Component {
   }
 
   sliderChanged = (e, value) => {
-    let cutWeight = parseFloat(value / 100);
+    const cutWeight = parseFloat(value / 100);
     this.setState({ bulkWeight: 1 - cutWeight, cutWeight });
   }
 
@@ -241,17 +263,17 @@ class App extends Component {
   loadExamples = () => {
     this.setState({ loadingFoods: true }, () => {
       if (this.state.user) {
-        let foodDoc = this.arrayToDoc(defaults, 'name');
+        const foodDoc = this.arrayToDoc(defaults, 'name');
         firebaseDoc.set(foodDoc, { merge: true })
           .then(() => this.getFoods());
       }
       else {
-        let trans = foodDB.transaction("food", "readwrite");
-        let store = trans.objectStore("food");
+        const store = foodDB.transaction("food", "readwrite")
+                            .objectStore("food");
         defaults.forEach((food) => {
           store.put(food);
         });
-        let signinPromptOpen = this.shouldShowSigninPrompt();
+        const signinPromptOpen = this.shouldShowSigninPrompt();
         if (signinPromptOpen) {
           this.setState({ signinPromptOpen });
           this.btnSignin.focus();
@@ -295,19 +317,17 @@ class App extends Component {
   }
 
   noPromptChkChange = (e) => {
-    let noPromptChk = e.target.checked;
+    const noPromptChk = e.target.checked;
     this.setState({ noPromptChk });
     localStorage.setItem('noPromptChk', noPromptChk);
   }
 
   clearLocalStore = () => {
-    let trans = foodDB.transaction("food", "readwrite");
-    let store = trans.objectStore("food");
-    store.clear();
+    foodDB.transaction("food", "readwrite").objectStore("food").clear();
   }
 
   transferFoods = () => {
-    let foodDoc = this.arrayToDoc(this.state.localFoods, 'name');
+    const foodDoc = this.arrayToDoc(this.state.localFoods, 'name');
     firebaseDoc.set(foodDoc, { merge: true })
       .then(() => {
         this.clearLocalStore();
@@ -455,6 +475,7 @@ class App extends Component {
                     <Fade in={this.state.cbulkOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
                         <p>Ranked by a ratio of <b>protein/calories</b>.</p>
+                        <p>Foods highest in protein with least caloric impact.</p>
                       </Paper>
                     </Fade>
                   </ClickAwayListener>
@@ -478,6 +499,7 @@ class App extends Component {
                     <Fade in={this.state.dbulkOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
                         <p>Ranked by a ratio of <b>protein/weight</b>.</p>
+                        <p>Foods highest in protein with lower overall mass.</p>
                       </Paper>
                     </Fade>
                   </ClickAwayListener>
@@ -501,6 +523,7 @@ class App extends Component {
                     <Fade in={this.state.cutOpen} timeout={popperFadeMs}>
                       <Paper className="popover">
                         <p>Ranked by a ratio of <b>weight/calories</b>.</p>
+                        <p>Most filling/satiating foods per calorie.</p>
                       </Paper>
                     </Fade>
                   </ClickAwayListener>
@@ -549,9 +572,12 @@ class App extends Component {
                                 <IconButton onClick={() => this.editFood(food)} title="Edit">
                                   <EditIcon />
                                 </IconButton>
-                                <IconButton onClick={() => this.deleteFood(food.name)} title="Delete">
-                                  <DeleteIcon />
-                                </IconButton>
+                                <span className={'async-button'+ (this.state.isDeleting[food.name] ? ' async-button--loading' : '') }>
+                                  <CircularProgress className="spinner" />
+                                  <IconButton onClick={() => this.deleteFood(food)} title="Delete">
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </span>
                               </TableCell>
                             </TableRow>
                           )
@@ -591,9 +617,12 @@ class App extends Component {
                 <div>
                   <span className="cell head" />
                   <span className="cell action">
-                    <IconButton onClick={this.addFood} title="Add/Update">
-                      <SaveIcon />
-                    </IconButton>
+                    <span className={'async-button'+ (this.state.isUpdating ? ' async-button--loading' : '')}>
+                      <CircularProgress className="spinner" />
+                      <IconButton onClick={this.addFood} title="Add/Update">
+                        <SaveIcon />
+                      </IconButton>
+                    </span>
                     <IconButton onClick={this.clearInputs} title="Clear fields">
                       <ClearIcon />
                     </IconButton>

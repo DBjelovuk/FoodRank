@@ -253,6 +253,34 @@ $first-col-width: 200px;
   }
 }
 
+.async-button {
+  display: inline-block;
+  position: relative;
+
+  .spinner {
+    width: 30px !important;
+    height: 30px !important;
+    top: 10px;
+    left: 8px;
+    position: absolute;
+    display: none;
+  }
+
+  &--loading {
+    .spinner {
+      display: block;
+    }
+    button {
+      visibility: hidden;
+    }
+  }
+}
+
+.action .spinner {
+  top: 4px;
+  left: 9px;
+}
+
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
