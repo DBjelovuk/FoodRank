@@ -29,6 +29,8 @@ main {
   min-height: 106px
 }
 
+$first-col-width: 200px;
+
 .table {
   display: flex;
   flex-wrap: wrap;
@@ -42,12 +44,17 @@ main {
   }
   th, td {
     font-size: 14px;
-    padding-top: 12px;
-    padding-bottom: 12px;
+    padding: 12px 15px;
 
+    &:last-child {
+      padding-right: 15px;
+    }
+
+    &:first-child {
+      width: $first-col-width;
+    }
     &:not(:first-child) {
       text-align: right;
-      padding: 0 15px;
     }
   }
   th {
@@ -56,6 +63,7 @@ main {
     color: #fff;
     padding-top: 14px;
     padding-bottom: 14px;
+    white-space: nowrap;
   }
 
   .head {
@@ -68,7 +76,7 @@ main {
   }
 
   &--index {
-    max-width: 300px;
+    max-width: 365px;
 
     .head {
       margin-bottom: 10px;
@@ -110,6 +118,13 @@ main {
     flex-wrap: nowrap;
     margin-top: 50px;
 
+    > * {
+      flex: 1;
+    }
+
+    > :first-child {
+      flex-basis: 16%;
+    }
     button {
       margin-top: -5px;
     }
@@ -121,6 +136,9 @@ main {
       min-height: 16px;
       font-size: 14px;
       font-weight: 500;
+    }
+    .text-field {
+      width: 100%;
     }
   }
 }
@@ -208,14 +226,22 @@ main {
 
 .modal {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   width: 300px;
   padding: 30px;
 
   img {
-    width: 80%;
+    width: 250px;
     cursor: pointer;
+
+    &:first-of-type {
+      width: 256px;
+    }
+  }
+
+  > :not(:last-child) {
+    margin-bottom: 20px;
   }
 
   &:focus {
@@ -245,6 +271,10 @@ main {
       flex-direction: column;
 
       > * {
+        &:first-child {
+          width: 100%;
+
+        }
         &:not(:last-child) {
           margin-bottom: 10px;
         }

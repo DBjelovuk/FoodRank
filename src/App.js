@@ -59,6 +59,7 @@ const firestore = firebase.firestore();
 firestore.settings({ timestampsInSnapshots: true });
 
 const googleAuthProvider = new firebase.auth.GoogleAuthProvider();
+const facebookAuthProvider = new firebase.auth.FacebookAuthProvider();
 
 const popperFadeMs = 350;
 
@@ -260,12 +261,27 @@ class App extends Component {
     });
   }
 
-  signIn = () => {
-    firebase.auth().signInWithPopup(googleAuthProvider)
-      .then((user) => {
-        this.setState({ isSigninOpen: false,
-                        isTransferOpen: !!this.state.foods.length,
-                        localFoods: this.state.foods }); // Preserve prior/local state of foods for transfer
+  signIn = (provider, andLink) => {
+    firebase.auth().signInWithPopup(provider)
+      .then((res) => {
+        const newState = { isSigninOpen: false,
+                           alreadyExists: false,
+                           isTransferOpen: !!this.state.foods.length,
+                           localFoods: this.state.foods }; // Preserve prior/local state of foods for transfer
+        if (!andLink) {
+          this.setState(newState);
+        }
+        else {
+          this.setState(newState);
+          res.user.linkAndRetrieveDataWithCredential(this.state.credential);
+        }
+      })
+      .catch((err) => {
+        if (err.code === 'auth/account-exists-with-different-credential') {
+          const newProvider = provider === facebookAuthProvider ? googleAuthProvider
+                                                                : facebookAuthProvider;
+          this.setState({ isSigninOpen: false, alreadyExists: true, credential: err.credential, newProvider });
+        }
       });
   }
 
@@ -337,7 +353,21 @@ class App extends Component {
             onClose={() => this.setState({ isSigninOpen: false })}
           >
             <Paper className="modal">
-              <img src="/images/signin_google.png" onClick={this.signIn}/>
+              <img src="/images/signin_google.png" onClick={() => this.signIn(googleAuthProvider)}/>
+              <img src="/images/signin_facebook.png" onClick={() => this.signIn(facebookAuthProvider)}/>
+            </Paper>
+          </Modal>
+          <Modal
+            className="modal-container"
+            open={this.state.alreadyExists}
+            onClose={() => this.setState({ alreadyExists: false })}
+          >
+            <Paper className="modal">
+              <div>Looks like the email associated with that account has already been registered under another provider. You can sign in with that provider instead, or link the two accounts.</div>
+              <div>
+                <Button variant="contained" color="primary" onClick={() => this.signIn(this.state.newProvider)}>Sign in</Button>
+                <Button variant="contained" color="primary" onClick={() => this.signIn(this.state.newProvider, true)}>Sign in and link</Button>
+              </div>
             </Paper>
           </Modal>
           <img src={logo} className="App-logo" alt="logo" />
@@ -535,27 +565,27 @@ class App extends Component {
                 <div>
                   <label className="cell head" >Name</label>
                   <label className="cell">
-                    <TextField value={this.state.txtName} onInput={this.updateVal} name="txtName"
+                    <TextField className="text-field" value={this.state.txtName} onInput={this.updateVal} name="txtName"
                                inputRef={(nameInput) => this.nameInput = nameInput} />
                   </label>
                 </div>
                 <div>
                   <span className="cell head">Calories</span>
                   <div className="cell">
-                    <TextField type="number" value={this.state.txtCalories} onInput={this.updateVal} name="txtCalories"
-                               inputRef={(calInput) => this.calInput = calInput} />
+                    <TextField className="text-field" type="number" value={this.state.txtCalories} onInput={this.updateVal}
+                               name="txtCalories" inputRef={(calInput) => this.calInput = calInput} />
                   </div>
                 </div>
                 <div>
                   <span className="cell head">Weight (g)</span>
                   <div className="cell">
-                    <TextField type="number" value={this.state.txtWeight} onInput={this.updateVal} name="txtWeight" />
+                    <TextField className="text-field" type="number" value={this.state.txtWeight} onInput={this.updateVal} name="txtWeight" />
                   </div>
                 </div>
                 <div>
                   <span className="cell head">Protein (g)</span>
                   <div className="cell">
-                    <TextField type="number" value={this.state.txtProtein} onInput={this.updateVal} name="txtProtein" />
+                    <TextField className="text-field" type="number" value={this.state.txtProtein} onInput={this.updateVal} name="txtProtein" />
                   </div>
                 </div>
                 <div>
@@ -579,7 +609,9 @@ class App extends Component {
           >
             <Paper className="modal">
               <div>
-                <div>You have some foods saved locally. Would you like them transferred to your account?</div><br/>
+                You have some foods saved locally. Would you like them transferred to your account?
+              </div>
+              <div>
                 <Button variant="contained" color="primary" onClick={this.transferFoods}>Let's do it</Button>
                 <Button variant="contained" color="primary" onClick={() => this.setState({ isTransferOpen: false })}>No thanks</Button>
               </div>
