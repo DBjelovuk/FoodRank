@@ -96,8 +96,10 @@ class App extends Component {
         if (user) {
           firebaseDoc = firestore.collection('user_foods').doc(user.uid);
         }
-
-        if (foodDB) return;
+        if (foodDB) {
+          this.getFoods();
+          return;
+        }
         const request = indexedDB.open("FoodRank", 1);
         request.onsuccess = (e) => {
           foodDB = e.target.result;
