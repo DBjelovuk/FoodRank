@@ -304,6 +304,12 @@ $first-col-width: 200px;
   left: 9px;
 }
 
+.preload {
+  width: 0;
+  height: 0;
+  visibility: hidden;
+}
+
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

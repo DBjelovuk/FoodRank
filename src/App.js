@@ -82,6 +82,7 @@ class App extends Component {
     isSigninOpen: false,
     signinPromptOpen: false,
     isTransferOpen: false,
+    alreadyExists: false,
     isDeleting: {}
   };
 
@@ -351,7 +352,7 @@ class App extends Component {
             anchorEl={this.btnSignin}
             placement="bottom-end"
           >
-            <ClickAwayListener mouseEvent="onClick" onClickAway={() => this.setState({ signinPromptOpen: false, supressPrompt: true })}>
+            <ClickAwayListener mouseEvent="onClick" touchEvent={false} onClickAway={() => this.setState({ signinPromptOpen: false, supressPrompt: true })}>
               <Fade in={this.state.signinPromptOpen} timeout={popperFadeMs}>
                 <Paper className="popover">
                   <p>Sign in to sync your foods across devices.</p>
@@ -376,8 +377,8 @@ class App extends Component {
           >
             <Paper className="modal">
               <h2>Sign in</h2>
-              <img src="/images/signin_google.png" onClick={() => this.signIn(googleAuthProvider)}/>
-              <img src="/images/signin_facebook.png" onClick={() => this.signIn(facebookAuthProvider)}/>
+              <img src="images/signin_google.png" onClick={() => this.signIn(googleAuthProvider)}/>
+              <img src="images/signin_facebook.png" onClick={() => this.signIn(facebookAuthProvider)}/>
             </Paper>
           </Modal>
           <Modal
@@ -650,6 +651,8 @@ class App extends Component {
             </Paper>
           </Modal>
         </main>
+        <img className="preload" src="images/signin_google.png"></img>
+        <img className="preload" src="images/signin_facebook.png"></img>
       </div>
     );
   }
