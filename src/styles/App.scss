@@ -231,6 +231,7 @@ $first-col-width: 200px;
 .modal {
   display: flex;
   flex-direction: column;
+  margin: 0 15px;
   padding: 30px;
   max-width: 600px;
   line-height: 24px;

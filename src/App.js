@@ -39,16 +39,18 @@ import Modal from '@material-ui/core/Modal';
 import RootRef from '@material-ui/core/RootRef';
 
 const defaults = [
-  { name: 'Pure Protein bar', calories: 200,  protein: 20, weight: 50 },
-  { name: 'Egg whites',       calories: 120,  protein: 28, weight: 252 },
-  { name: 'Ground beef',      calories: 765,  protein: 95, weight: 450 },
-  { name: 'Snack Pack jello', calories: 5,    protein: 0,  weight: 99 },
-  { name: 'Potatoes',         calories: 297,  protein: 8,  weight: 400 },
-  { name: 'White rice',       calories: 365,  protein: 7,  weight: 100 },
-  { name: 'Ground turkey',    calories: 590,  protein: 82, weight: 454 },
-  { name: 'Pepperoni pizza',  calories: 1290, protein: 50, weight: 537 },
-  { name: 'Breyers Delights', calories: 280,  protein: 16, weight: 286 },
-  { name: 'Broccoli',         calories: 34,   protein: 2.8, weight: 100 }
+  { name: 'Pure Protein bar',      calories: 200,  protein: 20,  weight: 50 },
+  { name: 'Egg whites',            calories: 120,  protein: 28,  weight: 252 },
+  { name: 'Ground beef',           calories: 765,  protein: 95,  weight: 450 },
+  { name: 'Snack Pack jello',      calories: 5,    protein: 0,   weight: 99 },
+  { name: 'Potatoes',              calories: 297,  protein: 8,   weight: 400 },
+  { name: 'White rice',            calories: 365,  protein: 7,   weight: 100 },
+  { name: 'Ground turkey',         calories: 590,  protein: 82,  weight: 454 },
+  { name: 'Pepperoni pizza',       calories: 1290, protein: 50,  weight: 537 },
+  { name: 'Breyers Delights',      calories: 280,  protein: 16,  weight: 286 },
+  { name: 'Broccoli',              calories: 34,   protein: 2.8, weight: 100 },
+  { name: 'Doritos',               calories: 528,  protein: 7,   weight: 100 },
+  { name: 'McDonald\'s apple pie', calories: 270,  protein: 3,   weight: 79 }
 ];
 
 let foodDB;
@@ -439,8 +441,8 @@ class App extends Component {
                       {
                         this.state.foods.map(food => {
                           let index = !food.calories ? Infinity :
-                                      this.state.goal === 'cbulk'  ? food.protein / food.calories * 100 :
-                                      this.state.goal === 'dbulk' ? food.protein / food.weight * 100 :
+                                      this.state.goal === 'cbulk'  ? food.protein / food.calories * 1000 :
+                                      this.state.goal === 'dbulk' ? food.protein / food.weight * 1000 :
                                                                     food.weight / food.calories * 100;
                           return { name: food.name, index }
                         })
