@@ -92,6 +92,7 @@ class App extends Component {
     super();
 
     this.state.noPromptChk = JSON.parse(localStorage.getItem('noPromptChk'));
+    this.state.goal = localStorage.getItem('lastGoal') || this.state.goal;
 
     firebase.auth().onAuthStateChanged((user) => {
       this.setState({ user, loadingFoods: true }, () => {
@@ -235,6 +236,7 @@ class App extends Component {
     else {
       this.setState({ bulkWeight: .33, cutWeight: .67, goal });
     }
+    localStorage.setItem('lastGoal', goal);
   }
 
   sliderChanged = (e, value) => {

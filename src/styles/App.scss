@@ -306,6 +306,7 @@ $first-col-width: 200px;
 }
 
 .preload {
+  display: block;
   width: 0;
   height: 0;
   visibility: hidden;
@@ -345,6 +346,7 @@ $first-col-width: 200px;
           .cell {
             justify-content: flex-end;
             margin-top: 10px;
+            margin-bottom: 15px;
           }
         }
       }
