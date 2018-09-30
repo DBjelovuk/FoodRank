@@ -44,7 +44,7 @@ const defaults = [
   { name: 'Ground beef',           calories: 765,  protein: 95,  weight: 450 },
   { name: 'Snack Pack jello',      calories: 5,    protein: 0,   weight: 99 },
   { name: 'Potatoes',              calories: 297,  protein: 8,   weight: 400 },
-  { name: 'White rice',            calories: 365,  protein: 7,   weight: 100 },
+  { name: 'White rice',            calories: 130,  protein: 7,   weight: 100 },
   { name: 'Ground turkey',         calories: 590,  protein: 82,  weight: 454 },
   { name: 'Pepperoni pizza',       calories: 1290, protein: 50,  weight: 537 },
   { name: 'Breyers Delights',      calories: 280,  protein: 16,  weight: 286 },
