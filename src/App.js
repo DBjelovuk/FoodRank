@@ -51,7 +51,9 @@ function highChartSyncHeight() {
   series.reverse().every(checkVisible);
 
   const extraHeight = (window.innerWidth < 992 ? chart.legend.legendHeight + 35 : 0);
-  chart.setSize(undefined, (series.length - trimCount) * 30 + extraHeight);
+  chart.setSize(undefined, (series.length - trimCount) * 30 + extraHeight, false);
+  // TODO: Animate bars
+  // chart.redraw({ duration: 1000 });
 }
 
 const hiddenFoods = JSON.parse(localStorage.getItem('hiddenFoods')) || [];
