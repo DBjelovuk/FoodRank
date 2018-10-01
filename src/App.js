@@ -35,14 +35,114 @@ import Popper from '@material-ui/core/Popper';
 import ClickAwayListener from '@material-ui/core/ClickAwayListener';
 import Fade from '@material-ui/core/Fade';
 import Modal from '@material-ui/core/Modal';
+import Switch from '@material-ui/core/Switch';
 
 import RootRef from '@material-ui/core/RootRef';
 
+import Highchart from 'react-highcharts';
+
+function highChartSyncHeight() {
+  const chart = this.chart || this;
+
+  let trimCount = 0;
+  const series = [ ...chart.series ];
+  const checkVisible = (s) => !s.visible && ++trimCount;
+  series.every(checkVisible);
+  series.reverse().every(checkVisible);
+
+  const extraHeight = (window.innerWidth < 992 ? chart.legend.legendHeight + 35 : 0);
+  chart.setSize(undefined, (series.length - trimCount) * 30 + extraHeight);
+}
+
+const hiddenFoods = JSON.parse(localStorage.getItem('hiddenFoods')) || [];
+
+let highChartConfig = {
+  chart: {
+    type: 'bar',
+    marginTop: 0,
+    spacingTop: 0,
+    spacingRight: 0,
+    spacingLeft: 0,
+    events: { load: function() { highChartSyncHeight.call(this) } }
+  },
+  title: null,
+  xAxis: {
+    type: 'category',
+    padding: 0
+  },
+  yAxis: {
+    title: null,
+    endOnTick: false,
+    labels: { enabled: false },
+    tickInterval: 10
+  },
+  colors: ['#3f51b5'],
+  tooltip: {
+    headerFormat: '<span class="highcharts-header">{point.key}</span><br/>',
+    pointFormat: '<b>{point.y}</b>'
+  },
+  plotOptions: {
+    series: {
+      grouping: false,
+      pointWidth: 25,
+      events: {
+        legendItemClick: function() {
+          if (this.visible) {
+            hiddenFoods.push(this.name);
+          }
+          else {
+            hiddenFoods.splice(hiddenFoods.indexOf(this.name), 1);
+          }
+          localStorage.setItem('hiddenFoods', JSON.stringify(hiddenFoods));
+          highChartSyncHeight.call(this)
+        }
+      }
+    }
+  },
+  legend: {
+    layout: 'vertical',
+    align: 'right',
+    verticalAlign: 'top',
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    shadow: true,
+    symbolWidth: 0,
+    itemMarginTop: 2,
+    itemMarginBottom: 2,
+    title: { text: 'Toggle foods' },
+    navigation: { enabled: false }
+  },
+  credits: {
+    enabled: false
+  },
+  series: [{
+    data: []
+  }],
+  responsive: {
+    rules: [{
+      condition: {
+        maxWidth: 801
+      },
+      chartOptions: {
+        legend: {
+          layout: 'horizontal',
+          align: 'center',
+          verticalAlign: 'bottom',
+          itemMarginTop: 4,
+          itemMarginBottom: 4,
+          margin: 35,
+          padding: 15
+        }
+      }
+    }],
+  }
+};
+
 const defaults = [
-  { name: 'Pure Protein bar',      calories: 200,  protein: 20,  weight: 50 },
+  { name: 'Pure Protein bar',      calories: 200,  protein: 20,  weight: 50  },
   { name: 'Egg whites',            calories: 120,  protein: 28,  weight: 252 },
   { name: 'Ground beef',           calories: 765,  protein: 95,  weight: 450 },
-  { name: 'Snack Pack jello',      calories: 5,    protein: 0,   weight: 99 },
+  { name: 'Snack Pack jello',      calories: 5,    protein: 0,   weight: 99  },
   { name: 'Potatoes',              calories: 297,  protein: 8,   weight: 400 },
   { name: 'White rice',            calories: 130,  protein: 7,   weight: 100 },
   { name: 'Ground turkey',         calories: 590,  protein: 82,  weight: 454 },
@@ -50,7 +150,7 @@ const defaults = [
   { name: 'Breyers Delights',      calories: 280,  protein: 16,  weight: 286 },
   { name: 'Broccoli',              calories: 34,   protein: 2.8, weight: 100 },
   { name: 'Doritos',               calories: 528,  protein: 7,   weight: 100 },
-  { name: 'McDonald\'s apple pie', calories: 270,  protein: 3,   weight: 79 }
+  { name: 'McDonald\'s apple pie', calories: 270,  protein: 3,   weight: 79  }
 ];
 
 let foodDB;
@@ -85,7 +185,8 @@ class App extends Component {
     signinPromptOpen: false,
     isTransferOpen: false,
     alreadyExists: false,
-    isDeleting: {}
+    isDeleting: {},
+    chartView: false
   };
 
   constructor() {
@@ -93,6 +194,7 @@ class App extends Component {
 
     this.state.noPromptChk = JSON.parse(localStorage.getItem('noPromptChk'));
     this.state.goal = localStorage.getItem('lastGoal') || this.state.goal;
+    this.state.chartView = !!JSON.parse(localStorage.getItem('chartView'));
 
     firebase.auth().onAuthStateChanged((user) => {
       this.setState({ user, loadingFoods: true }, () => {
@@ -131,6 +233,27 @@ class App extends Component {
     const doc = {};
     array.forEach((el, i) => doc[el[keyProp] || i] = el);
     return doc;
+  }
+
+  getRankedFoods = () => (
+    this.state.foods.map(food => {
+      let index = !food.calories ? Infinity :
+                  this.state.goal === 'cbulk' ? food.protein / food.calories * 1000 :
+                  this.state.goal === 'dbulk' ? food.protein / food.weight   * 1000 :
+                                                food.weight  / food.calories * 100;
+      index = Math.round(index);
+      return { name: food.name, index }
+    })
+    .sort((a, b) => b.index - a.index)
+  )
+
+  getHighchartConfig = () => {
+    highChartConfig.series = this.getRankedFoods()
+                                 .map((food) => ({
+                                    name: food.name, data: [{ name: food.name, y: food.index }],
+                                    visible: !~hiddenFoods.indexOf(food.name)
+                                  }));
+    return highChartConfig;
   }
 
   getFoods = () => {
@@ -202,8 +325,9 @@ class App extends Component {
       firebaseDoc.update({ [food.name]: firebase.firestore.FieldValue.delete() })
         .then(() => {
           const foods = [ ...this.state.foods ];
-          const index = foods.indexOf(food);
-          foods.splice(index, 1);
+          foods.splice(foods.indexOf(food), 1);
+          hiddenFoods.splice(hiddenFoods.indexOf(this.name), 1);
+          localStorage.setItem('hiddenFoods', JSON.stringify(hiddenFoods));
 
           const isDeleting = { ...this.state.isDeleting, [food.name]: false };
           this.setState({ foods, isDeleting });
@@ -214,6 +338,9 @@ class App extends Component {
             .objectStore("food")
             .delete(food.name)
       .onsuccess = () => {
+        hiddenFoods.splice(hiddenFoods.indexOf(this.name), 1);
+        localStorage.setItem('hiddenFoods', JSON.stringify(hiddenFoods));
+
         const signinPromptOpen = this.shouldShowSigninPrompt();
         const isDeleting = { ...this.state.isDeleting, [food.name]: false };
         this.setState({ signinPromptOpen, isDeleting });
@@ -236,6 +363,7 @@ class App extends Component {
     else {
       this.setState({ bulkWeight: .33, cutWeight: .67, goal });
     }
+    highChartConfig = { ...highChartConfig };
     localStorage.setItem('lastGoal', goal);
   }
 
@@ -345,6 +473,11 @@ class App extends Component {
       });
   }
 
+  toggleChart = (e) => {
+    this.setState({ chartView: e.target.checked });
+    localStorage.setItem('chartView', e.target.checked);
+  }
+
   render() {
     return (
       <div className="App">
@@ -431,34 +564,50 @@ class App extends Component {
               }
               {
                 !this.state.loadingFoods && !!this.state.foods.length &&
-                <Paper className="table table--index">
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Food</TableCell>
-                        <TableCell>Index</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {
-                        this.state.foods.map(food => {
-                          let index = !food.calories ? Infinity :
-                                      this.state.goal === 'cbulk'  ? food.protein / food.calories * 1000 :
-                                      this.state.goal === 'dbulk' ? food.protein / food.weight * 1000 :
-                                                                    food.weight / food.calories * 100;
-                          return { name: food.name, index }
-                        })
-                        .sort((a, b) => b.index - a.index)
-                        .map(food =>
-                          <TableRow key={food.name}>
-                            <TableCell>{food.name}</TableCell>
-                            <TableCell>{Math.round(food.index)}</TableCell>
-                          </TableRow>
-                        )
+                <div className="index-container">
+                  <div className="switch-container">
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={this.state.chartView}
+                          onChange={this.toggleChart}
+                          color="primary"
+                        />
                       }
-                    </TableBody>
-                  </Table>
-                </Paper>
+                      label="Chart view"
+                    />
+                  </div>
+                  {
+                    !this.state.chartView &&
+                    <Paper className="table table--index">
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Food</TableCell>
+                            <TableCell>Index</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {
+                            this.getRankedFoods()
+                            .map(food =>
+                              <TableRow key={food.name}>
+                                <TableCell>{food.name}</TableCell>
+                                <TableCell>{Math.round(food.index)}</TableCell>
+                              </TableRow>
+                            )
+                          }
+                        </TableBody>
+                      </Table>
+                    </Paper>
+                  }
+                  {
+                    this.state.chartView &&
+                    <div className="highchart">
+                      <Highchart config={this.getHighchartConfig()} isPureConfig></Highchart>
+                    </div>
+                  }
+                </div>
               }
               <RadioGroup
                 name="goal"

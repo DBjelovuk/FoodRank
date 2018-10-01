@@ -33,6 +33,22 @@ button {
   min-height: 106px
 }
 
+.index-container {
+  display: flex;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+}
+
+.switch-container {
+  float: left;
+  position: relative;
+  top: -15px;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
 $first-col-width: 200px;
 
 .table {
@@ -81,6 +97,13 @@ $first-col-width: 200px;
 
   &--index {
     max-width: 365px;
+    flex: 1 100%;
+    width: 100%;
+
+    @media (min-width: 768px) {
+      position: relative;
+      left: -65px;
+    }
 
     .head {
       margin-bottom: 10px;
@@ -143,6 +166,43 @@ $first-col-width: 200px;
     }
     .text-field {
       width: 100%;
+    }
+  }
+}
+
+.highchart {
+  margin: auto;
+  flex: 1 100%;
+  width: 100%;
+
+  .highcharts-root {
+    font-family: Roboto !important;
+  }
+  .highcharts-axis-labels text {
+    font-size: 13px !important;
+  }
+  .highcharts-legend-item text {
+    font-size: 13px !important;
+
+    @media (max-width: 991px) {
+      font-size: 15px !important;
+    }
+  }
+  .highcharts-header {
+    font-size: 12px !important;
+  }
+  .highcharts-legend-item .highcharts-point {
+    display: none;
+  }
+  .highcharts-legend-box:not(.highcharts-shadow) {
+    fill: rgba(255,255,255,0.5);
+  }
+  .highcharts-legend-title {
+    font-size: 16px;
+    transform: translate(8px, 7px);
+    @media (max-width: 991px) {
+      transform: translate(15px, 12px);
+      font-size: 18px !important;
     }
   }
 }
