@@ -8,6 +8,7 @@
 
 # production
 /build
+app.yaml
 
 # misc
 .DS_Store
