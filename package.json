@@ -18,13 +18,15 @@
     "watch-css": "node-sass -w src -o src",
     "start": "serve -s build",
     "local": "npm run watch-css && react-scripts start",
+    "prebuild": "scripts/build.js pre",
     "build": "npm run prewatch-css && react-scripts build",
-    "deploy": "npm run build && gcloud app deploy -q -v=1",
+    "postbuild": "scripts/build.js post",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   },
   "devDependencies": {
-    "node-sass": "^4.11.0"
+    "node-sass": "^4.11.0",
+    "rimraf": "^2.6.3"
   },
   "browserslist": [
     ">0.2%",
